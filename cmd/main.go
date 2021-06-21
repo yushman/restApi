@@ -1,15 +1,18 @@
 package main
 
 import (
+	"context"
 	"github.com/joho/godotenv"
 	"github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"os"
+	"os/signal"
 	"restApi"
 	"restApi/pkg/handler"
 	"restApi/pkg/repository"
 	"restApi/pkg/service"
+	"syscall"
 )
 
 func main() {
@@ -37,11 +40,26 @@ func main() {
 	handlers := handler.NewHandler(services)
 
 	srv := new(restApi.Server)
-	if err := srv.Run(viper.GetString("port"), handlers.InitRoutes()); err != nil {
-		logrus.Fatal("error")
-	}
+	go func() {
+		if err := srv.Run(viper.GetString("port"), handlers.InitRoutes()); err != nil {
+			logrus.Fatal("error")
+		}
+	}()
+
 	_ = pq.Efatal
 
+	logrus.Print("Server started\n")
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
+	<-quit
+
+	if err := srv.Shutdown(context.Background()); err != nil {
+		logrus.Errorf("error occured on server shutdown: %s", err.Error())
+	}
+	if err := db.Close(); err != nil {
+		logrus.Errorf("error occured on db connection closing: %s", err.Error())
+	}
 }
 
 func initConfig() error {
