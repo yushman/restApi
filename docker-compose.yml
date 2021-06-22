@@ -1,0 +1,20 @@
+version: "3.3"
+services:
+  rest-api-app:
+    build: ./
+    command: ./rest-api
+    ports:
+    - 8000:8000
+    depends_on:
+      - db-postgres
+    environment:
+      - DB_PASSWORD=qwerty
+  db-postgres:
+    restart: always
+    image: postgres:latest
+    volumes:
+    - ./.database/postgres/data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=qwerty
+    ports:
+    - 5436:5432
